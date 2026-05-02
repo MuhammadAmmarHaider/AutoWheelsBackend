@@ -64,4 +64,10 @@ export class CatalogController {
     async getById(@Param('id') id: string) {
         return this.catalogService.getById(id);
     }
+
+    @Get(':id/similar')
+    async getSimilarCars(@Param('id') id: string, @Query('limit') limitRaw?: string) {
+        const limit = Math.min(10, Math.max(1, parseInt(limitRaw || '4', 10) || 4));
+        return this.catalogService.getSimilarCars(id, limit);
+    }
 }

@@ -126,9 +126,59 @@ export class CatalogService {
                 images: true,
                 brand: true,
                 model: true,
+                dimensions: true,
+                engineDetails: true,
+                transmissionDetails: true,
+                steering: true,
+                suspension: true,
+                wheels: true,
+                fuelEconomy: true,
+                reviews: {
+                    include: {
+                        user: {
+                            select: {
+                                id: true,
+                                name: true,
+                                email: true,
+                            },
+                        },
+                    },
+                    orderBy: { createdAt: 'desc' },
+                },
             },
         });
         if (!entry) throw new NotFoundException('Specifications not found');
         return entry;
+    }
+
+    async getSimilarCars(id: string, limit: number = 4) {
+        const entry = await this.prisma.newCar.findUnique({
+            where: { id },
+            select: {
+                brandId: true,
+                bodyType: true,
+                fuelType: true,
+            },
+        });
+
+        if (!entry) throw new NotFoundException('Car not found');
+
+        return this.prisma.newCar.findMany({
+            where: {
+                AND: [
+                    { id: { not: id } },
+                    {
+                        OR: [
+                            { brandId: entry.brandId },
+                            { bodyType: entry.bodyType },
+                            { fuelType: entry.fuelType },
+                        ],
+                    },
+                ],
+            },
+            include: CATALOG_CARD_INCLUDE,
+            take: limit,
+            orderBy: { createdAt: 'desc' },
+        });
     }
 }

@@ -148,4 +148,10 @@ export class ListingController {
     ) {
         return this.listingService.updateListingStatus(id, user.id, status);
     }
+
+    @Get(':id/similar')
+    async getSimilarListings(@Param('id') id: string, @Query('limit') limitRaw?: string) {
+        const limit = Math.min(10, Math.max(1, parseInt(limitRaw || '4', 10) || 4));
+        return this.listingService.getSimilarListings(id, limit);
+    }
 }

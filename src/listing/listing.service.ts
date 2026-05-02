@@ -464,4 +464,40 @@ export class ListingService {
 
         return updated;
     }
+
+    async getSimilarListings(id: string, limit: number = 4) {
+        const listing = await this.prisma.listing.findUnique({
+            where: { id },
+            select: {
+                brandId: true,
+                modelId: true,
+                fuelType: true,
+                transmission: true,
+            },
+        });
+
+        if (!listing) {
+            throw new NotFoundException('Listing not found');
+        }
+
+        return this.prisma.listing.findMany({
+            where: {
+                AND: [
+                    { id: { not: id } },
+                    { status: ListingStatus.ACTIVE },
+                    {
+                        OR: [
+                            { brandId: listing.brandId },
+                            { modelId: listing.modelId },
+                            { fuelType: listing.fuelType },
+                            { transmission: listing.transmission },
+                        ],
+                    },
+                ],
+            },
+            include: LISTING_CARD_INCLUDE,
+            take: limit,
+            orderBy: { createdAt: 'desc' },
+        });
+    }
 }

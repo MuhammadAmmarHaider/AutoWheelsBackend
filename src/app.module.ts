@@ -11,6 +11,7 @@ import { FavoriteModule } from './favorite/favorite.module';
 import { UploadModule } from './upload/upload.module';
 import { CatalogModule } from './catalog/catalog.module';
 import { NewCarModule } from './new-car/new-car.module';
+import { ReviewModule } from './review/review.module';
 
 @Module({
     imports: [
@@ -26,6 +27,7 @@ import { NewCarModule } from './new-car/new-car.module';
         FavoriteModule,
         UploadModule,
         NewCarModule,
+        ReviewModule,
     ],
 })
 export class AppModule {}

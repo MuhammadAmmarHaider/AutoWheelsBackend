@@ -63,6 +63,7 @@ model User {
   favorites        Favorite[]
   sentMessages     Message[] @relation("Sender")
   receivedMessages Message[] @relation("Receiver")
+  reviews          Review[]
 }
 
 //////////////////////////////////////
@@ -151,6 +152,7 @@ model NewCar {
   wheels            CarWheels?
   fuelEconomy       CarFuelEconomy?
   images            NewCarImage[]
+  reviews           Review[]
 
   @@unique([name, year, brandId])
   @@index([brandId])
@@ -331,6 +333,34 @@ model Favorite {
 
   @@unique([userId, listingId])
   @@index([userId])
+}
+
+//////////////////////////////////////
+// REVIEWS (FOR NEW CARS)
+//////////////////////////////////////
+
+model Review {
+  id                    String   @id @default(uuid())
+  title                 String
+  description           String
+  styleRating           Int      // 1-5
+  comfortRating         Int      // 1-5
+  fuelEconomyRating     Int      // 1-5
+  performanceRating     Int      // 1-5
+  valueForMoneyRating   Int      // 1-5
+  overallRating         Float    // Calculated: average of 5 categories
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  userId                String
+  newCarId              String
+
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  newCar                NewCar   @relation(fields: [newCarId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([newCarId])
+  @@index([createdAt])
 }
 
 //////////////////////////////////////
