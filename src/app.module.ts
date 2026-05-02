@@ -9,6 +9,8 @@ import { BrandModule } from './brand/brand.module';
 import { CityModule } from './city/city.module';
 import { FavoriteModule } from './favorite/favorite.module';
 import { UploadModule } from './upload/upload.module';
+import { CatalogModule } from './catalog/catalog.module';
+import { NewCarModule } from './new-car/new-car.module';
 
 @Module({
     imports: [
@@ -18,10 +20,12 @@ import { UploadModule } from './upload/upload.module';
         UserModule,
         ChatModule,
         ListingModule,
+        CatalogModule,
         BrandModule,
         CityModule,
         FavoriteModule,
         UploadModule,
+        NewCarModule,
     ],
 })
 export class AppModule {}

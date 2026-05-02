@@ -69,24 +69,44 @@ export class FavoriteService {
         return { message: 'Removed from favorites' };
     }
 
-    async getUserFavorites(userId: string) {
-        const favorites = await this.prisma.favorite.findMany({
-            where: { userId },
-            include: {
-                listing: {
-                    include: {
-                        images: true,
-                        user: { select: { id: true, name: true, email: true, phone: true } },
-                        brand: true,
-                        model: true,
-                        city: true,
+    async getUserFavorites(userId: string, options?: { skip?: number; take?: number }) {
+        const skip = Math.max(0, options?.skip ?? 0);
+        const parsedTake = options?.take ?? 30;
+        const take = Math.min(100, Math.max(1, parsedTake));
+
+        const where = { userId };
+
+        const [favorites, total] = await Promise.all([
+            this.prisma.favorite.findMany({
+                where,
+                include: {
+                    listing: {
+                        include: {
+                            images: true,
+                            user: { select: { id: true, name: true, email: true, phone: true } },
+                            brand: true,
+                            model: true,
+                            city: true,
+                        },
                     },
                 },
-            },
+                orderBy: { createdAt: 'desc' },
+                skip,
+                take,
+            }),
+            this.prisma.favorite.count({ where }),
+        ]);
+
+        return { favorites, total, skip, take };
+    }
+
+    async getFavoriteListingIds(userId: string) {
+        const rows = await this.prisma.favorite.findMany({
+            where: { userId },
+            select: { listingId: true },
             orderBy: { createdAt: 'desc' },
         });
-
-        return favorites;
+        return { listingIds: rows.map(r => r.listingId) };
     }
 
     async isFavorite(userId: string, listingId: string): Promise<boolean> {

@@ -1,7 +1,16 @@
 import { Injectable, ForbiddenException, NotFoundException } from '@nestjs/common';
+import { ListingStatus, type Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateListingDto, UpdateListingDto } from './dto';
-import { ListingStatus } from '@prisma/client';
+
+const LISTING_CARD_INCLUDE = {
+    images: true,
+    brand: true,
+    model: true,
+    city: true,
+} as const;
+
+export type HomeSectionKey = 'latest' | 'best_value' | 'newest_models';
 
 interface CachedOptions {
   data: any;
@@ -11,6 +20,138 @@ interface CachedOptions {
 @Injectable()
 export class ListingService {
     constructor(private prisma: PrismaService) {}
+
+    private buildPublicListingWhere(params: {
+        cityId?: string;
+        search?: string;
+    }): Prisma.ListingWhereInput {
+        const q = params.search?.trim();
+        return {
+            status: ListingStatus.ACTIVE,
+            ...(params.cityId && { cityId: params.cityId }),
+            ...(q
+                ? {
+                      OR: [
+                          { title: { contains: q, mode: 'insensitive' } },
+                          { description: { contains: q, mode: 'insensitive' } },
+                          {
+                              brand: {
+                                  name: { contains: q, mode: 'insensitive' },
+                              },
+                          },
+                          {
+                              model: {
+                                  name: { contains: q, mode: 'insensitive' },
+                              },
+                          },
+                      ],
+                  }
+                : {}),
+        };
+    }
+
+    async getHomeFeed(params: { cityId?: string; search?: string }) {
+        const where = this.buildPublicListingWhere(params);
+
+        const [latest, bestValue, newestModels] = await Promise.all([
+            this.prisma.listing.findMany({
+                where,
+                include: LISTING_CARD_INCLUDE,
+                orderBy: { createdAt: 'desc' },
+                take: 10,
+            }),
+            this.prisma.listing.findMany({
+                where,
+                include: LISTING_CARD_INCLUDE,
+                orderBy: { price: 'asc' },
+                take: 10,
+            }),
+            this.prisma.listing.findMany({
+                where,
+                include: LISTING_CARD_INCLUDE,
+                orderBy: { year: 'desc' },
+                take: 10,
+            }),
+        ]);
+
+        return {
+            sections: [
+                { key: 'latest', title: 'Latest arrivals', listings: latest },
+                {
+                    key: 'best_value',
+                    title: 'Best value picks',
+                    listings: bestValue,
+                },
+                {
+                    key: 'newest_models',
+                    title: 'Newest models',
+                    listings: newestModels,
+                },
+            ],
+        };
+    }
+
+    async browseListings(params: {
+        cityId?: string;
+        search?: string;
+        section: HomeSectionKey;
+        skip: number;
+        take: number;
+    }) {
+        const where = this.buildPublicListingWhere(params);
+        const orderBy: Prisma.ListingOrderByWithRelationInput =
+            params.section === 'latest'
+                ? { createdAt: 'desc' }
+                : params.section === 'best_value'
+                  ? { price: 'asc' }
+                  : { year: 'desc' };
+
+        const [listings, total] = await Promise.all([
+            this.prisma.listing.findMany({
+                where,
+                include: LISTING_CARD_INCLUDE,
+                orderBy,
+                skip: params.skip,
+                take: params.take,
+            }),
+            this.prisma.listing.count({ where }),
+        ]);
+
+        return {
+            listings,
+            total,
+            skip: params.skip,
+            take: params.take,
+        };
+    }
+
+    /** Single “view all” feed: all active listings, newest first. */
+    async exploreListings(params: {
+        cityId?: string;
+        search?: string;
+        skip: number;
+        take: number;
+    }) {
+        const where = this.buildPublicListingWhere(params);
+
+        const [listings, total] = await Promise.all([
+            this.prisma.listing.findMany({
+                where,
+                include: LISTING_CARD_INCLUDE,
+                orderBy: { createdAt: 'desc' },
+                skip: params.skip,
+                take: params.take,
+            }),
+            this.prisma.listing.count({ where }),
+        ]);
+
+        return {
+            listings,
+            total,
+            skip: params.skip,
+            take: params.take,
+        };
+    }
 
     // Cache duration: 30 minutes
     private sellFormOptionsCache: CachedOptions | null = null;

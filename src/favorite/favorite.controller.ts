@@ -6,6 +6,7 @@ import {
     Param,
     Body,
     UseGuards,
+    Query,
 } from '@nestjs/common';
 import { FavoriteService } from './favorite.service';
 import { AddFavoriteDto } from './dto';
@@ -30,9 +31,23 @@ export class FavoriteController {
     }
 
     @UseGuards(JwtGuard)
+    @Get('listing-ids')
+    async getListingIds(@GetUser() user: User) {
+        return this.favoriteService.getFavoriteListingIds(user.id);
+    }
+
+    /** Paginated saves for the Saved ads screen. */
+    @UseGuards(JwtGuard)
     @Get()
-    async getMyFavorites(@GetUser() user: User) {
-        return this.favoriteService.getUserFavorites(user.id);
+    async getMyFavorites(
+        @GetUser() user: User,
+        @Query('skip') skipRaw?: string,
+        @Query('take') takeRaw?: string,
+    ) {
+        const skip = Math.max(0, parseInt(skipRaw || '0', 10) || 0);
+        const parsedTake = parseInt(takeRaw || '25', 10) || 25;
+        const take = Math.min(100, Math.max(1, parsedTake));
+        return this.favoriteService.getUserFavorites(user.id, { skip, take });
     }
 
     @Get('check/:listingId')

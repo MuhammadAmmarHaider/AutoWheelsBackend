@@ -1,4 +1,5 @@
 import {
+    BadRequestException,
     Controller,
     Get,
     Post,
@@ -17,6 +18,17 @@ import { GetUser } from '../auth/decorator';
 import { ListingStatus } from '@prisma/client';
 import type { User } from '@prisma/client';
 import type { Response } from 'express';
+
+const HOME_SECTIONS = ['latest', 'best_value', 'newest_models'] as const;
+type HomeSectionKey = (typeof HOME_SECTIONS)[number];
+
+function parseBrowseSection(raw?: string): HomeSectionKey {
+    const key = (raw || 'latest').trim();
+    if (HOME_SECTIONS.includes(key as HomeSectionKey)) return key as HomeSectionKey;
+    throw new BadRequestException(
+        `Invalid section. Use one of: ${HOME_SECTIONS.join(', ')}.`,
+    );
+}
 
 @Controller('listings')
 export class ListingController {
@@ -45,6 +57,59 @@ export class ListingController {
             'Cache-Control': 'public, max-age=600',
         });
         return res.json(data);
+    }
+
+    /** Rows for home: Latest arrivals, Best value picks, Newest models (10 each). For-sale listings only. */
+    @Get('home-feed')
+    async getHomeFeed(
+        @Query('cityId') cityId?: string,
+        @Query('search') search?: string,
+    ) {
+        return this.listingService.getHomeFeed({
+            cityId: cityId || undefined,
+            search: search || undefined,
+        });
+    }
+
+    /** Paginated marketplace listings for “View all”. */
+    @Get('browse')
+    async browseListings(
+        @Query('cityId') cityId?: string,
+        @Query('search') search?: string,
+        @Query('section') section?: string,
+        @Query('skip') skipRaw?: string,
+        @Query('take') takeRaw?: string,
+    ) {
+        const sectionKey = parseBrowseSection(section);
+        const parsedSkip = Math.max(0, parseInt(skipRaw || '0', 10) || 0);
+        const parsedTake = parseInt(takeRaw || '20', 10) || 20;
+        const take = Math.min(50, Math.max(1, parsedTake));
+        return this.listingService.browseListings({
+            cityId: cityId || undefined,
+            search: search || undefined,
+            section: sectionKey,
+            skip: parsedSkip,
+            take,
+        });
+    }
+
+    /** Unified paginated marketplace feed for the app “View all” screen (sections merged). */
+    @Get('explore')
+    async exploreListings(
+        @Query('cityId') cityId?: string,
+        @Query('search') search?: string,
+        @Query('skip') skipRaw?: string,
+        @Query('take') takeRaw?: string,
+    ) {
+        const parsedSkip = Math.max(0, parseInt(skipRaw || '0', 10) || 0);
+        const parsedTake = parseInt(takeRaw || '20', 10) || 20;
+        const take = Math.min(50, Math.max(1, parsedTake));
+        return this.listingService.exploreListings({
+            cityId: cityId || undefined,
+            search: search || undefined,
+            skip: parsedSkip,
+            take,
+        });
     }
 
     @UseGuards(JwtGuard)
