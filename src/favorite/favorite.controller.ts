@@ -8,6 +8,7 @@ import {
     UseGuards,
     Query,
 } from '@nestjs/common';
+// The FavoriteController handles all HTTP requests related to user favorites, including adding a favorite listing, removing a favorite listing, retrieving a user's favorite listings, checking if a listing is a favorite, and getting the count of favorites for a listing. It uses the FavoriteService to perform the necessary business logic and interacts with the database through Prisma.
 import { FavoriteService } from './favorite.service';
 import { AddFavoriteDto } from './dto';
 import { JwtGuard } from '../auth/guard';

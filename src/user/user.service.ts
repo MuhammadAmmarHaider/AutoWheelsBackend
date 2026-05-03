@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { EditUserDto } from './dto';
 import { PrismaService } from '../prisma/prisma.service';
-
+// Service for handling user-related operations such as finding users, updating user information, and retrieving user profiles
 @Injectable()
 export class UserService {
     constructor(private prisma: PrismaService) {}

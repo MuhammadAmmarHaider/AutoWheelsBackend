@@ -15,7 +15,7 @@ export class FavoriteService {
         if (!listing) {
             throw new NotFoundException('Listing not found');
         }
-
+// Attempt to create a new favorite entry, handling potential conflicts if the user has already favorited this listing
         try {
             const favorite = await this.prisma.favorite.create({
                 data: {
