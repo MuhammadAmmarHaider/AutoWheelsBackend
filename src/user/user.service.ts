@@ -48,9 +48,24 @@ export class UserService {
             throw new NotFoundException('User not found');
         }
 
+        // Prepare update data, converting birthday to proper DateTime if provided
+        const updateData: any = { ...dto };
+        
+        // Only include defined fields (filter out undefined)
+        Object.keys(updateData).forEach(key => {
+            if (updateData[key] === undefined) {
+                delete updateData[key];
+            }
+        });
+
+        // Convert birthday string to DateTime if provided
+        if (updateData.birthday && typeof updateData.birthday === 'string') {
+            updateData.birthday = new Date(updateData.birthday);
+        }
+
         const updated = await this.prisma.user.update({
             where: { id: userId },
-            data: dto,
+            data: updateData,
         });
 
         const { password, ...userWithoutPassword } = updated;
