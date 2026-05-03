@@ -14,7 +14,7 @@ import { JwtGuard } from '../auth/guard';
 @Controller('upload')
 export class UploadController {
   constructor(private uploadService: UploadService) {}
-
+// Endpoint for uploading multiple images (up to 8 files, max 10MB each)
   @UseGuards(JwtGuard)
   @Post('images')
   @UseInterceptors(
