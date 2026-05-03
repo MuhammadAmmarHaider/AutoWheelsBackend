@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -180,5 +180,90 @@ export class CatalogService {
             take: limit,
             orderBy: { createdAt: 'desc' },
         });
+    }
+
+    async createReview(
+        carId: string,
+        userId: string,
+        reviewData: {
+            title: string;
+            description: string;
+            styleRating: number;
+            comfortRating: number;
+            fuelEconomyRating: number;
+            performanceRating: number;
+            valueForMoneyRating: number;
+            overallRating: number;
+        },
+    ) {
+        // Check if car exists
+        const car = await this.prisma.newCar.findUnique({
+            where: { id: carId },
+        });
+        
+        if (!car) throw new NotFoundException('Car not found');
+
+        // Validate ratings
+        const ratings = [
+            reviewData.styleRating,
+            reviewData.comfortRating,
+            reviewData.fuelEconomyRating,
+            reviewData.performanceRating,
+            reviewData.valueForMoneyRating,
+            reviewData.overallRating,
+        ];
+
+        for (const rating of ratings) {
+            if (rating < 1 || rating > 5) {
+                throw new BadRequestException('All ratings must be between 1 and 5');
+            }
+        }
+
+        // Create the review
+        return this.prisma.review.create({
+            data: {
+                ...reviewData,
+                newCarId: carId,
+                userId,
+            },
+            include: {
+                user: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                    },
+                },
+            },
+        });
+    }
+
+    async getFormOptions() {
+        // Get all brands with their models
+        const brands = await this.prisma.brand.findMany({
+            include: {
+                models: {
+                    orderBy: { name: 'asc' },
+                },
+            },
+            orderBy: { name: 'asc' },
+        });
+
+        // Transform to the format expected by the frontend
+        const models = brands.flatMap(brand => 
+            brand.models.map(model => ({
+                id: model.id,
+                name: model.name,
+                brandId: brand.id,
+                brandName: brand.name,
+                fullName: `${brand.name} ${model.name}`,
+            }))
+        );
+
+        // Return in the same format as sell-now form options
+        return {
+            cities: [], // Empty cities array for now, can be added later
+            models,
+        };
     }
 }

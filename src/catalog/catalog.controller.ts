@@ -3,11 +3,16 @@ import {
     Controller,
     Get,
     Param,
+    Post,
     Query,
     Res,
+    UseGuards,
+    Body,
 } from '@nestjs/common';
 import type { Response } from 'express';
 import { CatalogService } from './catalog.service';
+import { JwtGuard } from '../auth/guard';
+import { GetUser } from '../auth/decorator';
 
 const CATALOG_BROWSE_SECTIONS = ['latest', 'featured', 'newest_models'] as const;
 type CatalogBrowseSectionKey =
@@ -60,6 +65,11 @@ export class CatalogController {
         });
     }
 
+    @Get('form-options')
+    async getFormOptions() {
+        return this.catalogService.getFormOptions();
+    }
+
     @Get(':id')
     async getById(@Param('id') id: string) {
         return this.catalogService.getById(id);
@@ -69,5 +79,24 @@ export class CatalogController {
     async getSimilarCars(@Param('id') id: string, @Query('limit') limitRaw?: string) {
         const limit = Math.min(10, Math.max(1, parseInt(limitRaw || '4', 10) || 4));
         return this.catalogService.getSimilarCars(id, limit);
+    }
+
+    @Post(':id/reviews')
+    @UseGuards(JwtGuard)
+    async createReview(
+        @Param('id') id: string,
+        @GetUser() user: any,
+        @Body() body: {
+            title: string;
+            description: string;
+            styleRating: number;
+            comfortRating: number;
+            fuelEconomyRating: number;
+            performanceRating: number;
+            valueForMoneyRating: number;
+            overallRating: number;
+        },
+    ) {
+        return this.catalogService.createReview(id, user.id, body);
     }
 }
