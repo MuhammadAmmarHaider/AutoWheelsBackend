@@ -31,4 +31,11 @@ export class AuthController {
             role: user.role,
         };
     }
+
+    @UseGuards(JwtGuard)
+    @HttpCode(HttpStatus.OK)
+    @Post('logout')
+    async logout(@GetUser() user: User) {
+        return this.authService.logout(user.id);
+    }
 }

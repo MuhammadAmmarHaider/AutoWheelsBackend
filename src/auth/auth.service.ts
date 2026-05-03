@@ -86,4 +86,12 @@ export class AuthService {
 
         return token;
     }
+
+    async logout(userId: string) {
+        // For JWT-based auth, logout is primarily client-side (token removal)
+        // This endpoint exists for future token blacklisting if needed
+        return {
+            message: 'Logged out successfully',
+        };
+    }
 }

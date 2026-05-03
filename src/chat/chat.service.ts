@@ -63,12 +63,43 @@ export class ChatService {
             include: {
                 sender: { select: { id: true, name: true, email: true } },
                 receiver: { select: { id: true, name: true, email: true } },
-                listing: { select: { id: true, title: true } },
+                listing: {
+                    select: {
+                        id: true,
+                        title: true,
+                        year: true,
+                        price: true,
+                        images: {
+                            select: { id: true, url: true },
+                            orderBy: { id: 'asc' },
+                            take: 1,
+                        },
+                        brand: { select: { id: true, name: true } },
+                        model: { select: { id: true, name: true } },
+                        city: { select: { id: true, name: true } },
+                    },
+                },
             },
             orderBy: { createdAt: 'desc' },
-            distinct: ['senderId', 'receiverId', 'listingId'],
         });
 
-        return conversations;
+        // Group conversations by unique pair of users (bidirectional) and listingId
+        // Sort user IDs to ensure same conversation regardless of who sent first
+        const grouped = new Map();
+        for (const msg of conversations) {
+            const userPair = [msg.senderId, msg.receiverId].sort().join('-');
+            const key = `${userPair}-${msg.listingId}`;
+            if (!grouped.has(key)) {
+                grouped.set(key, msg);
+            } else {
+                // Keep the most recent message
+                const existing = grouped.get(key);
+                if (new Date(msg.createdAt) > new Date(existing.createdAt)) {
+                    grouped.set(key, msg);
+                }
+            }
+        }
+
+        return Array.from(grouped.values());
     }
 }
